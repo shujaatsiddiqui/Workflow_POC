@@ -3,14 +3,14 @@ using ElsaServer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Elsa services with in-memory storage (simpler for POC)
+// Add Elsa services with in-memory storage
 builder.Services.AddElsa(elsa =>
 {
-    // Workflow Management and Runtime (in-memory storage)
+    // Workflow Management and Runtime (in-memory - workflows persist only while server runs)
     elsa.UseWorkflowManagement();
     elsa.UseWorkflowRuntime();
 
-    // Identity for local admin login to Studio (runs on localhost, not cloud)
+    // Identity for local admin login to Studio
     elsa.UseIdentity(identity =>
     {
         identity.TokenOptions = options => options.SigningKey = builder.Configuration["Identity:Tokens:SigningKey"]!;
