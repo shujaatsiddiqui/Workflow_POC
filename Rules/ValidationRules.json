@@ -1,0 +1,21 @@
+[
+  {
+    "WorkflowName": "PeritusRetailRemitRules",
+    "Rules": [
+      {
+        "RuleName": "BR-005",
+        "ErrorMessage": "Zero Payment Amount",
+        "ErrorType": "Error",
+        "RuleExpressionType": "LambdaExpression",
+        "Expression": "input1.CreditAmount != 0"
+      },
+      {
+        "RuleName": "BR-008",
+        "ErrorMessage": "Account status 93 blocks posting",
+        "ErrorType": "Error",
+        "RuleExpressionType": "LambdaExpression",
+        "Expression": "input1.FIC_CLSFD_CD != 93"
+      }
+    ]
+  }
+]

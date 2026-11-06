@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>b5fd2e9f-d903-4903-a6a2-d5c0d5298275</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Elsa" Version="3.9.0" />
+    <PackageReference Include="Elsa.Dashboard.Api" Version="3.9.0" />
+    <PackageReference Include="Elsa.Expressions.CSharp" Version="3.9.0" />
+    <PackageReference Include="Elsa.Expressions.JavaScript" Version="3.9.0" />
+    <PackageReference Include="Elsa.Expressions.Liquid" Version="3.9.0" />
+    <PackageReference Include="Elsa.Http" Version="3.9.0" />
+    <PackageReference Include="Elsa.Identity" Version="3.9.0" />
+    <PackageReference Include="Elsa.Persistence.EFCore" Version="3.9.0" />
+    <PackageReference Include="Elsa.Persistence.EFCore.Sqlite" Version="3.9.0" />
+    <PackageReference Include="Elsa.Scheduling" Version="3.9.0" />
+    <PackageReference Include="Elsa.Workflows.Api" Version="3.9.0" />
+    <PackageReference Include="Elsa.Workflows.Runtime.Dashboard" Version="3.9.0" />
+    <PackageReference Include="RulesEngine" Version="6.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Rules\**\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
