@@ -1,14 +1,35 @@
 using Elsa.Extensions;
+using Elsa.Persistence.EFCore.Modules.Management;
+using Elsa.Persistence.EFCore.Modules.Runtime;
+using Elsa.Persistence.EFCore.Extensions;
 using ElsaServer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Elsa services with in-memory storage
+// Add Elsa services with SQL Server persistence
+var connectionString = "Server=localhost,1433;Database=ElsaDb;User Id=sa;Password=Elsa@12345;TrustServerCertificate=True;MultipleActiveResultSets=true;";
+
 builder.Services.AddElsa(elsa =>
 {
-    // Workflow Management and Runtime (in-memory - workflows persist only while server runs)
-    elsa.UseWorkflowManagement();
-    elsa.UseWorkflowRuntime();
+    // Workflow Management persistence (stores workflow definitions and instances)
+    elsa.UseWorkflowManagement(management =>
+    {
+        management.UseEntityFrameworkCore(ef =>
+        {
+            ef.UseSqlServer(connectionString);
+            ef.RunMigrations = true; // Auto-apply migrations on startup
+        });
+    });
+
+    // Workflow Runtime persistence (stores bookmarks, inbox, execution logs)
+    elsa.UseWorkflowRuntime(runtime =>
+    {
+        runtime.UseEntityFrameworkCore(ef =>
+        {
+            ef.UseSqlServer(connectionString);
+            ef.RunMigrations = true;
+        });
+    });
 
     // Identity for local admin login to Studio
     elsa.UseIdentity(identity =>
