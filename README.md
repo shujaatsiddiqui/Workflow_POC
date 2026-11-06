@@ -61,7 +61,22 @@ docker run -d \
   elsaworkflows/elsa-studio-v3:latest
 ```
 
-### Step 2: Configure User Secrets
+### Step 2: Run SQL Server (Docker)
+```bash
+docker run -d \
+  --name elsa-sqlserver \
+  -e "ACCEPT_EULA=Y" \
+  -e "SA_PASSWORD=Elsa@12345" \
+  -p 1433:1433 \
+  mcr.microsoft.com/mssql/server:2022-latest
+```
+
+**Connection String:**
+```
+Server=localhost,1433;Database=ElsaDb;User Id=sa;Password=Elsa@12345;TrustServerCertificate=True;MultipleActiveResultSets=true;
+```
+
+### Step 3: Configure User Secrets
 ```bash
 cd ElsaServer
 dotnet user-secrets init
@@ -70,14 +85,20 @@ dotnet user-secrets set "Identity:Bootstrap:UserName" "admin"
 dotnet user-secrets set "Identity:Bootstrap:Password" "Admin@12345"
 ```
 
-### Step 3: Run Elsa Server
+### Step 4: Run Elsa Server
 ```bash
 dotnet run --urls=http://localhost:5001
 ```
 
-### Step 4: Access Studio
+### Step 5: Access Studio
 1. Open browser: http://localhost:14000
 2. Login with: `admin` / `Admin@12345`
+3. Create workflows - they will persist in SQL Server!
+
+**Verify Persistence:**
+- Create a workflow and save it
+- Restart the Elsa server
+- Refresh Studio - your workflow will still be there ✅
 
 ## Payment Validation Workflow Example
 
@@ -398,11 +419,16 @@ ElsaServer/
 
 ## Known Limitations
 
-### ⚠️ In-Memory Storage
-- **Issue:** Workflows are stored in memory only
-- **Impact:** All workflows lost when server restarts
-- **Workaround:** Keep server running during development
-- **Root Cause:** Elsa 3.9.0 EF Core persistence API incompatible with .NET 10
+### ✅ ~~In-Memory Storage~~ **RESOLVED**
+- **Status:** ✅ SQL Server persistence now working!
+- **Solution:** Required module-specific using directives in Elsa 3.9.0:
+  ```csharp
+  using Elsa.Persistence.EFCore.Modules.Management;
+  using Elsa.Persistence.EFCore.Modules.Runtime;
+  using Elsa.Persistence.EFCore.Extensions;
+  ```
+- **Key Insight:** In Elsa 3.9.0, each module encapsulates its own extension methods
+- **Result:** Workflows now persist across server restarts in SQL Server
 
 ### ⚠️ Mock Data
 - Activities use hardcoded mock data
@@ -412,10 +438,10 @@ ElsaServer/
 
 ## Future Enhancements
 
-### 🔧 Persistence
-- Downgrade to Elsa 3.3.x (known working persistence)
-- OR wait for Elsa 3.10+ with .NET 10 support
-- OR use in-memory + workflow export/import
+### ✅ ~~Persistence~~ **COMPLETED**
+- SQL Server persistence now working with Elsa 3.9.0 + .NET 10
+- Workflows persist across server restarts
+- Auto-migrations enabled
 
 ### 🔧 Real Data Integration
 - Connect EnrichAccount to actual student database
@@ -436,6 +462,69 @@ ElsaServer/
 ---
 
 ## Technical Notes
+
+### SQL Server Persistence (Elsa 3.9.0)
+
+**The Challenge:**
+Initial attempts to configure Entity Framework Core persistence failed with:
+```
+error CS1061: 'WorkflowManagementFeature' does not contain a definition for 'UseEntityFrameworkCore'
+```
+
+**The Solution:**
+In Elsa 3.9.0, each EF Core module encapsulates its own extension methods. You must import **module-specific** using directives:
+
+```csharp
+using Elsa.Extensions;
+using Elsa.Persistence.EFCore.Modules.Management;   // ← Required for management.UseEntityFrameworkCore()
+using Elsa.Persistence.EFCore.Modules.Runtime;     // ← Required for runtime.UseEntityFrameworkCore()
+using Elsa.Persistence.EFCore.Extensions;          // ← Required for ef.UseSqlServer()
+```
+
+**Configuration:**
+```csharp
+builder.Services.AddElsa(elsa =>
+{
+    var connectionString = "Server=localhost,1433;Database=ElsaDb;User Id=sa;Password=Elsa@12345;TrustServerCertificate=True;MultipleActiveResultSets=true;";
+
+    // Workflow Management persistence
+    elsa.UseWorkflowManagement(management =>
+    {
+        management.UseEntityFrameworkCore(ef =>
+        {
+            ef.UseSqlServer(connectionString);
+            ef.RunMigrations = true;  // Auto-apply migrations
+        });
+    });
+
+    // Workflow Runtime persistence
+    elsa.UseWorkflowRuntime(runtime =>
+    {
+        runtime.UseEntityFrameworkCore(ef =>
+        {
+            ef.UseSqlServer(connectionString);
+            ef.RunMigrations = true;
+        });
+    });
+});
+```
+
+**Key Learnings:**
+1. **Module-Specific Namespaces:** Unlike earlier versions, Elsa 3.9.0 requires importing specific module namespaces
+2. **.NET 10 Compatible:** Works perfectly with .NET 10 despite packages targeting net8.0
+3. **Auto-Migrations:** Setting `RunMigrations = true` automatically creates/updates database schema on startup
+4. **Two Contexts:** Management (definitions/instances) and Runtime (bookmarks/inbox) use separate persistence configurations
+
+**Database Tables Created:**
+- `WorkflowDefinitions` - Workflow blueprints
+- `WorkflowInstances` - Execution state
+- `Bookmarks` - Suspension points
+- `WorkflowInboxMessages` - Incoming messages
+- `WorkflowExecutionLogRecords` - Execution history
+- `BookmarkQueueItems` - Queued work
+- `__EFMigrationsHistory` - Migration tracking
+
+---
 
 ### Elsa 3.9.0 Syntax Patterns
 
